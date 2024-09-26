@@ -63,7 +63,7 @@ export class AuthService {
     const url = `http://localhost:4200/authentication/activate/${token}`;
     const mail = await this.mailService.sendMail({
       to: email,
-      from: 'binomiapp@outlook.com',
+      from: 'maissabfr@gmail.com',
       subject: 'Account confirmation',
       html:
         '<h1>Confirmation Mail</h1> <h2>Welcome</h2><p>To activate your account, please click on this link</p><a href=' +

@@ -6,6 +6,7 @@ import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { JwtModule } from '@nestjs/jwt';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -17,16 +18,17 @@ import { JwtModule } from '@nestjs/jwt';
     JwtModule,
     MailerModule.forRoot({
       transport: {
-        host: 'smtp-mail.outlook.com',
-        port: 587,
-        secure: false,
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
         auth: {
-          user: 'binomiapp@outlook.com',
-          pass: 'Mmmm1234',
+          user: 'maissabfr@gmail.com',
+          pass: 'wazppioquyfafccx',
         },
       },
     }),
     AuthModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
