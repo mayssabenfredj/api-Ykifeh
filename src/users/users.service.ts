@@ -80,12 +80,15 @@ export class UsersService {
 
     const updateData: { [key: string]: any } = {};
 
-    if (updateAuthDto.clubName) {
-      updateData.clubName = updateAuthDto.clubName;
+    if (updateAuthDto.lastName) {
+      updateData.lastName = updateAuthDto.lastName;
     }
 
-    if (updateAuthDto.description) {
-      updateData.description = updateAuthDto.description;
+    if (updateAuthDto.firstName) {
+      updateData.firstName = updateAuthDto.firstName;
+    }
+    if (updateAuthDto.address) {
+      updateData.address = updateAuthDto.address;
     }
     if (photo) {
       updateData.photoProfile = photo;
