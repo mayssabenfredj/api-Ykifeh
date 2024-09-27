@@ -31,6 +31,7 @@ export class CreateAuthDto {
   @IsOptional()
   @IsObject()
   address: object;
+  
 
 
 }

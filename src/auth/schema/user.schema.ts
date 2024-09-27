@@ -25,11 +25,12 @@ export class User extends Document {
 
   @Prop({ type: Object })
   adress: Record<string, any>;
+  
+  @Prop({ default: 'user' })
+  role: string;
 
   @Prop({ default: false })
   isActive: Boolean;
-
- 
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
