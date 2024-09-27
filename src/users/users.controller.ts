@@ -1,34 +1,78 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UploadedFile,
+  Req,
+  UseInterceptors,
+  Res,
+  Headers,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express/multer';
+import { diskStorage } from 'multer';
+import { v4 as uuidv4 } from 'uuid';
 import { UsersService } from './users.service';
-import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
+import { UpdateAuthDto } from './dto/update-auth.dto';
+import { UpdatePasswordDto } from './dto/update-password-dto';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
-
-  @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    return this.usersService.create(createUserDto);
-  }
-
-  @Get()
+  constructor(private readonly usersService: UsersService) { }
+  
+@Get()
   findAll() {
     return this.usersService.findAll();
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.usersService.findOne(+id);
+    return this.usersService.findOne(id);
+  }
+   @Get('profileImage/:imageName')
+  findProfilImage(@Res() res, @Param('imageName') imageName: string) {
+    return this.usersService.findProfilImage(res, imageName);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(+id, updateUserDto);
+  @UseInterceptors(
+    FileInterceptor('photo', {
+      storage: diskStorage({
+        destination: './uploads/profileImage',
+        filename: (req, file, cb) => {
+          const filename = file.originalname + uuidv4();
+          const extension = file.originalname.split('.').pop();
+          cb(null, `${filename}.${extension}`);
+        },
+      }),
+    }),
+  )
+  update(
+    @Headers('token') token: string,
+    @Param('id') id: string,
+    @Body() updateAuthDto: UpdateAuthDto,
+    @UploadedFile() file,
+    @Req() req,
+  ) {
+    return this.usersService.update(token, updateAuthDto, file?.filename);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.usersService.remove(+id);
+ 
+  @Delete('delete')
+  remove(@Headers('token') token: string) {
+    return this.usersService.remove(token);
   }
+
+  @Patch('updatePassword')
+  updatePassword(
+    @Headers('token') token: string,
+    @Body() updatePassword: UpdatePasswordDto,
+  ) {
+    return this.usersService.updatePassword(token, updatePassword);
+  }
+
+  
 }
