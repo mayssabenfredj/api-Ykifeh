@@ -1,11 +1,31 @@
 import { Injectable } from '@nestjs/common';
 import { CreatePlaceDto } from './dto/create-place.dto';
 import { UpdatePlaceDto } from './dto/update-place.dto';
+import { JwtService } from '@nestjs/jwt';
+import { MailerService } from '@nestjs-modules/mailer';
+import { Places } from './schema/places.schema';
+import { Model } from 'mongoose';
+import { InjectModel } from '@nestjs/mongoose';
 
 @Injectable()
 export class PlacesService {
-  create(createPlaceDto: CreatePlaceDto) {
-    return 'This action adds a new place';
+  constructor(
+    private jwtService: JwtService,
+    private mailService: MailerService,
+    @InjectModel(Places.name)
+    private placesModel: Model<Places>,
+  ) {}
+  async create(createPlaceDto: CreatePlaceDto & { photos: string[] }) {
+    // Créer un nouvel enregistrement pour le lieu
+    const annonceCreated = await this.placesModel.create({
+      ...createPlaceDto,
+    });
+
+    if (annonceCreated) {
+      return { message: 'Annonce created, wait for confirmation from Admin.' };
+    } else {
+      throw new Error('Error while creating the Announce');
+    }
   }
 
   findAll() {
