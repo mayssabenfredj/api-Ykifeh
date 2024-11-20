@@ -1,16 +1,9 @@
 import { IsString, IsOptional, IsObject } from 'class-validator';
 
-
 export class UpdateAuthDto {
-  
-
   @IsOptional()
   @IsString()
-  firstName: string;
-
-  @IsOptional()
-  @IsString()
-  lastName: string;
+  fullName: string;
 
   @IsOptional()
   @IsObject()
