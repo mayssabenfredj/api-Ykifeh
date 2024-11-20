@@ -1,16 +1,25 @@
-import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User } from 'src/auth/schema/user.schema';
-import { comparePassword, hashPassword, validateToken } from 'src/shared/shared.service';
+import {
+  comparePassword,
+  hashPassword,
+  validateToken,
+} from 'src/shared/shared.service';
 import { UpdatePasswordDto } from './dto/update-password-dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
 import { join } from 'path';
 import * as path from 'path';
 import * as fs from 'fs';
 import { Response } from 'express';
-
 
 @Injectable()
 export class UsersService {
@@ -80,16 +89,14 @@ export class UsersService {
 
     const updateData: { [key: string]: any } = {};
 
-    if (updateAuthDto.lastName) {
-      updateData.lastName = updateAuthDto.lastName;
+    if (updateAuthDto.fullName) {
+      updateData.fullName = updateAuthDto.fullName;
     }
 
-    if (updateAuthDto.firstName) {
-      updateData.firstName = updateAuthDto.firstName;
-    }
     if (updateAuthDto.address) {
       updateData.address = updateAuthDto.address;
     }
+
     if (photo) {
       updateData.photoProfile = photo;
     }

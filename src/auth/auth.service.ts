@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
 import { JsonWebTokenError, JwtService, TokenExpiredError } from '@nestjs/jwt';
@@ -7,8 +12,7 @@ import { Model } from 'mongoose';
 import { User } from './schema/user.schema';
 import { EmailAuthDto } from './dto/email-auth.dto';
 import { ResetPasswordDto } from './dto/reset-password-dto';
-import {Response } from 'express';
-
+import { Response } from 'express';
 import {
   comparePassword,
   generateToken,
@@ -20,232 +24,179 @@ import { LoginAuthDto } from './dto/login-auth.dto';
 @Injectable()
 export class AuthService {
   constructor(
-    private jwtService: JwtService,
-    private mailService: MailerService,
+    private readonly jwtService: JwtService,
+    private readonly mailService: MailerService,
     @InjectModel(User.name)
-    private userModel: Model<User>,
+    private readonly userModel: Model<User>,
   ) {}
 
-  /******Sign up Methode *********** */
+  private async findByEmail(email: string): Promise<User | null> {
+    return this.userModel.findOne({ email });
+  }
+
+  private async sendEmail(
+    to: string,
+    subject: string,
+    html: string,
+  ): Promise<void> {
+    const mail = await this.mailService.sendMail({
+      to,
+      from: process.env.MAIL_FROM || 'maissabfr@gmail.com',
+      subject,
+      html,
+    });
+
+    if (!mail) {
+      throw new BadRequestException('Failed to send email');
+    }
+  }
+
   async signup(createAuthDto: CreateAuthDto) {
     const userExists = await this.findByEmail(createAuthDto.email);
     if (userExists) {
       throw new BadRequestException(
-        'User already exists with this email address.',
+        'User already exists with this email address',
       );
     }
 
     const hashedPassword = await hashPassword(createAuthDto.password);
-    console.log(hashedPassword);
-
-    const created = await this.userModel.create({
+    const user = await this.userModel.create({
       ...createAuthDto,
       password: hashedPassword,
     });
 
-    if (created) {
-      const token = await generateToken(this.jwtService, created);
-      await this.sendActivationEmail(createAuthDto.email, token);
+    const token = await generateToken(this.jwtService, user);
+    await this.sendActivationEmail(createAuthDto.email, token);
 
-      return { message: 'User created. Activation email sent.' };
-    }
+    return { message: 'User created. Activation email sent.' };
   }
-
-  async findByEmail(email: string) {
-    return this.userModel.findOne({
-      email,
-    });
-  }
-
-  /*********** Activation Account ********* */
 
   async sendActivationEmail(email: string, token: string) {
-    const url = `http://localhost:4200/authentication/activate/${token}`;
-    const mail = await this.mailService.sendMail({
-      to: email,
-      from: 'maissabfr@gmail.com',
-      subject: 'Account confirmation',
-      html:
-        '<h1>Confirmation Mail</h1> <h2>Welcome</h2><p>To activate your account, please click on this link</p><a href=' +
-        url +
-        '>Click this </a>',
-    });
-    if (mail) {
-      return { message: 'Email sent.' };
-    } else {
-      throw new BadRequestException('Email not sent.');
-    }
+    const activationUrl = `${
+      process.env.FRONTEND_URL || 'http://localhost:4200'
+    }/authentication/activate/${token}`;
+    const html = `
+      <h1>Confirmation Mail</h1>
+      <h2>Welcome</h2>
+      <p>To activate your account, please click on this link</p>
+      <a href="${activationUrl}">Click here to activate</a>
+    `;
+
+    await this.sendEmail(email, 'Account confirmation', html);
+    return { message: 'Email sent.' };
   }
 
   async activateAccount(token: string) {
-    let user;
-
     try {
-      console.log(token);
       const decodedToken = await this.jwtService.verifyAsync(token);
-      console.log(decodedToken);
-
-      const userId = decodedToken.userId;
-      console.log(userId);
-
-      user = await this.userModel.findOne({
-        _id: userId,
-      });
-      console.log(user);
+      const user = await this.userModel.findOne({ _id: decodedToken.userId });
 
       if (!user) {
-        throw new BadRequestException('User not found.');
+        throw new BadRequestException('User not found');
       }
 
       if (user.isActive) {
-        throw new BadRequestException('Account already active.');
+        throw new BadRequestException('Account already active');
       }
 
-      const activated = await this.userModel.updateOne(
-        { _id: userId },
+      await this.userModel.updateOne(
+        { _id: decodedToken.userId },
         { $set: { isActive: true } },
       );
 
-      if (activated) {
-        return { message: 'Account activated successfully.' };
-      }
+      return { message: 'Account activated successfully' };
     } catch (error) {
       if (error instanceof TokenExpiredError) {
         throw new BadRequestException(
-          'Token expired. A new activation email has been sent.',
+          'Token expired. A new activation email has been sent',
         );
-      } else if (error instanceof JsonWebTokenError) {
-        throw new BadRequestException('Invalid activation token.');
-      } else {
-        throw new BadRequestException('An error occurred during activation.');
       }
+      if (error instanceof JsonWebTokenError) {
+        throw new BadRequestException('Invalid activation token');
+      }
+      throw new BadRequestException('An error occurred during activation');
     }
   }
 
-  async sendBackMailConfirmation(emailDto: EmailAuthDto) {
-    const fondUser = await this.findByEmail(emailDto.email);
-    if (!fondUser) {
-      throw new BadRequestException('Invalid mail');
-    }
-
-    if (fondUser.isActive) {
-      throw new BadRequestException('Account already active.');
-    }
-    if (!fondUser.isActive) {
-      const token = await generateToken(this.jwtService, fondUser);
-      await this.sendActivationEmail(fondUser.email, token);
-      return { message: ' Activation email sent Successfully.' };
-    } else {
-      return { message: ' an error occurred while sending mail.' };
-    }
-  }
-
-  /************Sign in *********** */
   async signin(loginAuthDto: LoginAuthDto, res: Response) {
     const { email, password } = loginAuthDto;
-    const fondUser = await this.findByEmail(email);
-    if (!fondUser) {
-      throw new BadRequestException(
-        'Please check your information and try again',
-      );
+    const user = await this.findByEmail(email);
+
+    if (!user || !(await comparePassword({ password, hash: user.password }))) {
+      throw new BadRequestException('Invalid credentials');
     }
 
-    const isMatch = await comparePassword({
-      password,
-      hash: fondUser.password,
-    });
-    if (!isMatch) {
-      throw new BadRequestException(
-        'Please check your information and try again',
-      );
+    if (!user.isActive) {
+      throw new UnauthorizedException('Please verify your email address');
     }
 
-    if (!fondUser.isActive) {
-      throw new UnauthorizedException(
-        'Check your mail for Account Verfication please',
-      );
-    }
-
-    const token = await this.jwtService.signAsync({ id: fondUser.id });
+    const token = await this.jwtService.signAsync({ id: user.id });
     if (!token) {
-      throw new ForbiddenException();
+      throw new ForbiddenException('Failed to generate token');
     }
 
     res.cookie('token', token);
-
-    const jwt = { token: token };
-    return jwt;
+    return { token };
   }
 
-  /***************Verfiy User Connected ******* */
-
-  async GetUser(token: string) {
-    console.log(token);
+  async getUser(token: string) {
     if (!token) {
-      throw new UnauthorizedException('You are not loggged in');
+      throw new UnauthorizedException('Not authenticated');
     }
-    const data = await this.jwtService.verifyAsync(token);
 
-    if (!data) {
-      throw new UnauthorizedException();
+    const decoded = await this.jwtService.verifyAsync(token);
+    if (!decoded) {
+      throw new UnauthorizedException('Invalid token');
     }
-    const user = await this.userModel.findOne({ _id: data['id'] });
 
+    const user = await this.userModel.findOne({ _id: decoded.id });
     return { user };
   }
 
-  /**********************Sign out ********* */
   signout(res: Response) {
     res.clearCookie('token');
-    return res.send({ message: 'Logged out succefully' });
+    return { message: 'Logged out successfully' };
   }
 
-  /***************** Fotgot Password  */
-  async sendResetMail(toemail: string, token: string) {
-    const mail = await this.mailService.sendMail({
-      to: toemail,
-      from: 'binomiapp@outlook.com',
-      subject: 'Reset Password',
-      html:
-        '<h1>Reset Password</h1> <h2>Welcome</h2><p>To reset your password, please click on this link</p><a href=http://localhost:4200/authentication/reset/' +
-        token +
-        '>Click this </a>',
-    });
-    if (mail) {
-      return { message: 'mail sent successfuly' };
-    } else {
-      return { message: 'an error occurred while sending mail' };
-    }
+  async sendPasswordResetEmail(email: string, token: string) {
+    const resetUrl = `${
+      process.env.FRONTEND_URL || 'http://localhost:4200'
+    }/authentication/reset/${token}`;
+    const html = `
+      <h1>Reset Password</h1>
+      <h2>Welcome</h2>
+      <p>To reset your password, please click on this link</p>
+      <a href="${resetUrl}">Click here to reset password</a>
+    `;
+
+    await this.sendEmail(email, 'Reset Password', html);
+    return { message: 'Password reset email sent' };
   }
 
   async forgot(emailDto: EmailAuthDto) {
-    const fondUser = await this.findByEmail(emailDto.email);
-
-    if (!fondUser) {
-      throw new BadRequestException('Invalid mail');
+    const user = await this.findByEmail(emailDto.email);
+    if (!user) {
+      throw new BadRequestException('Invalid email');
     }
-    const token = await generateToken(this.jwtService, fondUser);
-    return await this.sendResetMail(emailDto.email, token);
+
+    const token = await generateToken(this.jwtService, user);
+    return this.sendPasswordResetEmail(emailDto.email, token);
   }
 
   async resetPassword(token: string, resetPassword: ResetPasswordDto) {
     const decodedToken = await this.jwtService.verifyAsync(token);
-    const userId = decodedToken.userId;
-    const foundUser = await this.userModel.findOne({ _id: userId });
-    if (!foundUser) {
-      return { message: 'User does not exist' };
+    const user = await this.userModel.findOne({ _id: decodedToken.userId });
+
+    if (!user) {
+      throw new BadRequestException('User not found');
     }
 
     const hashedPassword = await hashPassword(resetPassword.password);
-
-    const passwordReset = await this.userModel.updateOne(
-      { _id: userId },
+    await this.userModel.updateOne(
+      { _id: decodedToken.userId },
       { $set: { password: hashedPassword } },
     );
 
-    if (!passwordReset) {
-      return { message: 'Error' };
-    }
-    return { message: 'Your Password Has been Reset Successfully' };
+    return { message: 'Password reset successful' };
   }
 }

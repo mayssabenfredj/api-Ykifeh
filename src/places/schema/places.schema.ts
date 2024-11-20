@@ -2,19 +2,19 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
 class WorkDays {
-  @Prop({ required: true })
-  for: string; 
+  @Prop()
+  for: string;
 
-  @Prop({ required: true })
-  to: string; 
+  @Prop()
+  to: string;
 }
 
 class WorkHours {
-  @Prop({ required: true })
-  start: string; 
+  @Prop()
+  start: string;
 
-  @Prop({ required: true })
-  end: string; 
+  @Prop()
+  end: string;
 }
 
 @Schema({
@@ -33,19 +33,19 @@ export class Places extends Document {
   @Prop()
   description: string;
 
-  @Prop()
+  @Prop({ required: true })
   address: string;
-    
+
   @Prop()
   photos: Array<string>;
 
-  @Prop({ type: WorkDays, required: true })
+  @Prop({ type: WorkDays })
   daysOfWork: WorkDays;
 
   @Prop()
   restDays: string[];
 
-  @Prop({ type: WorkHours, required: true })
+  @Prop({ type: WorkHours })
   hoursOfWork: WorkHours;
 
   @Prop()

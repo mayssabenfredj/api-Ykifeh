@@ -1,11 +1,20 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseInterceptors, UploadedFiles } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseInterceptors,
+  UploadedFiles,
+} from '@nestjs/common';
 import { PlacesService } from './places.service';
 import { CreatePlaceDto } from './dto/create-place.dto';
 import { UpdatePlaceDto } from './dto/update-place.dto';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { v4 as uuidv4 } from 'uuid';
-
 
 @Controller('places')
 export class PlacesController {
@@ -58,16 +67,16 @@ export class PlacesController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.placesService.findOne(+id);
+    return this.placesService.findOne(id);
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updatePlaceDto: UpdatePlaceDto) {
-    return this.placesService.update(+id, updatePlaceDto);
+    return this.placesService.update(id, updatePlaceDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.placesService.remove(+id);
+    return this.placesService.remove(id);
   }
 }
