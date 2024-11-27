@@ -36,8 +36,7 @@ export class CreatePlaceDto {
   title: string;
 
   @IsNotEmpty()
-  @IsString()
-  type: string;
+  type: string[];
 
   @IsNotEmpty()
   tags: string[];
@@ -66,7 +65,4 @@ export class CreatePlaceDto {
 
   @IsString()
   lienMap: string;
-
-  @IsNotEmpty()
-  userId: Types.ObjectId;
 }

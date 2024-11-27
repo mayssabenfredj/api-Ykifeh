@@ -4,6 +4,7 @@ import { PlacesController } from './places.controller';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import { PlacesSchema } from './schema/places.schema';
+import { UserSchema } from 'src/auth/schema/user.schema';
 
 @Module({
   imports: [
@@ -16,6 +17,10 @@ import { PlacesSchema } from './schema/places.schema';
       {
         name: 'Places',
         schema: PlacesSchema,
+      },
+      {
+        name: 'User',
+        schema: UserSchema,
       },
     ]),
   ],

@@ -8,6 +8,8 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import { JwtModule } from '@nestjs/jwt';
 import { UsersModule } from './users/users.module';
 import { PlacesModule } from './places/places.module';
+import { FavoriesModule } from './favories/favories.module';
+import { ReviewsModule } from './reviews/reviews.module';
 
 @Module({
   imports: [
@@ -31,6 +33,8 @@ import { PlacesModule } from './places/places.module';
     AuthModule,
     UsersModule,
     PlacesModule,
+    FavoriesModule,
+    ReviewsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

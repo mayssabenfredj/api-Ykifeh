@@ -27,12 +27,7 @@ export class AuthController {
     return this.authService.signup(createAuthDto);
   }
 
-  /**
-   * Activates a user account using the provided token
-   * @param token - The activation token sent via email
-   * @returns A message indicating successful account activation
-   */
-  @Get('activate/:token')
+  @Get('activateAccount')
   async activateAccount(@Param('token') token: string) {
     return this.authService.activateAccount(token);
   }

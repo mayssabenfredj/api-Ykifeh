@@ -25,9 +25,9 @@ export class Places extends Document {
   title: string;
 
   @Prop({ required: true })
-  type: string;
+  type: string[];
 
-  @Prop({ unique: true, sparse: true, message: 'Duplicate tags entered' })
+  @Prop()
   tags: string[];
 
   @Prop()
