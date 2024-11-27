@@ -23,7 +23,7 @@ export class AuthController {
     return this.authService.signup(createAuthDto);
   }
 
-  @Get('activate/:token')
+  @Get('activateAccount')
   async activateAccount(@Param('token') token: string) {
     return this.authService.activateAccount(token);
   }

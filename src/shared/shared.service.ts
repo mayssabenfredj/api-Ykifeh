@@ -1,6 +1,20 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+
+/************Extract Token ***** */
+export const extractToken = (authorization: string) => {
+  if (!authorization) {
+    throw new Error('Authorization header is missing.');
+  }
+  const parts = authorization.split(' ');
+
+  if (parts.length !== 2 || parts[0].toLowerCase() !== 'bearer') {
+    throw new Error('Invalid authorization format. Expected "Bearer <token>".');
+  }
+
+  return parts[1];
+};
 
 export const validateToken = async (jwtService: JwtService, cookie: string) => {
   const tokenData = jwtService.decode(cookie) as {
@@ -31,3 +45,17 @@ export const generateToken = async (jwtService: JwtService, user: any) => {
   const payload = { userId: user.id, email: user.email };
   return jwtService.sign(payload);
 };
+
+/******Verfiy Admin *////// 
+export const verifyAdmin = async (jwtService: JwtService, token: string) => {
+  if (!token) {
+    throw new UnauthorizedException('You are not logged in');
+  }
+
+  const data = await jwtService.verifyAsync(token);
+  if (!data) {
+    throw new UnauthorizedException();
+  }
+  return data; 
+};
+
