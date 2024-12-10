@@ -3,15 +3,13 @@ import {
   IsEmail,
   IsNotEmpty,
   IsOptional,
-  
   IsObject,
 } from 'class-validator';
 
 export class CreateAuthDto {
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   fullName: string;
-
 
   @IsNotEmpty()
   @IsEmail()
@@ -28,7 +26,4 @@ export class CreateAuthDto {
   @IsOptional()
   @IsObject()
   address: object;
-  
-
-
 }

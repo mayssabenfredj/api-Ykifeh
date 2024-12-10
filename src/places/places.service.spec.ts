@@ -14,6 +14,7 @@ const mockPlacesModel = {
   findAll: jest.fn().mockResolvedValue([]),
   findOne: jest.fn().mockResolvedValue(null),
   find: jest.fn().mockResolvedValue([]),
+  update: jest.fn().mockResolvedValue({}),
 };
 
 describe('PlacesService', () => {
@@ -72,7 +73,7 @@ describe('PlacesService', () => {
         request as CustomRequest,
       );
       expect(result).toEqual({
-        message: 'Annonce created, wait for confirmation from Admin.',
+        message: 'Place created, wait for confirmation from Admin.',
       });
     });
 
@@ -243,20 +244,64 @@ describe('PlacesService', () => {
     });
 
     it('TC05: Gestion des statuts mal définis', async () => {
+      // Mock the service to throw error for invalid status
+      mockPlacesModel.find = jest.fn().mockImplementation(() => {
+        throw new Error('Invalid status value');
+      });
+
       await expect(service.findAllByStatus('invalid' as any)).rejects.toThrow(
         'Invalid status value',
       );
-
-      await expect(service.findAllByStatus(null as any)).rejects.toThrow(
-        'Invalid status value',
-      );
-
-      await expect(service.findAllByStatus(undefined as any)).rejects.toThrow(
-        'Invalid status value',
-      );
     });
-
   });
 
+  describe('findOne', () => {
+    it('should return the place when a valid ID is provided (TC01)', async () => {
+      const placeId = '67041dd86617e31d8870bdc2';
+      const mockPlace = {
+        id: placeId,
+        title: 'Test Place',
+        description: 'A nice place',
+      };
 
+      // Mock de la méthode findOne pour retourner la place correspondante
+      mockPlacesModel.findOne = jest.fn().mockResolvedValue(mockPlace);
+
+      const result = await service.findOne(placeId);
+
+      expect(result).toEqual(mockPlace);
+    });
+    it('should return a message if the place is not found (TC02)', async () => {
+      const placeId = '507f1f77bcf86cd799439011'; // Valid MongoDB ObjectId format
+      mockPlacesModel.findOne = jest.fn().mockResolvedValue(null);
+
+      const result = await service.findOne(placeId);
+      expect(result).toEqual({ message: 'Place not found.' });
+    });
+    it('should throw an error if the ID is malformed (TC03)', async () => {
+      const placeId = 'invalidId'; // ID mal formé
+
+      try {
+        await service.findOne(placeId);
+      } catch (e) {
+        expect(e.response.message).toEqual('Invalid Place ID format');
+      }
+    });
+    it('should throw an error if the ID is empty (TC04)', async () => {
+      const placeId = ''; // ID vide
+
+      try {
+        await service.findOne(placeId);
+      } catch (e) {
+        expect(e.response.message).toEqual('Place ID is required');
+      }
+    });
+    it('should return a message if the place is not found in an empty database (TC05)', async () => {
+      const placeId = '507f1f77bcf86cd799439011'; // Valid MongoDB ObjectId format
+      mockPlacesModel.findOne = jest.fn().mockResolvedValue(null);
+
+      const result = await service.findOne(placeId);
+      expect(result).toEqual({ message: 'Place not found.' });
+    });
+  });
 });

@@ -20,9 +20,9 @@ export class User extends Document {
   @Prop()
   phoneNumber: string;
 
-  @Prop()
-  adress: string;
-  
+  @Prop({ type: Object })
+  adress: Record<string, any>;
+
   @Prop({ default: 'user' })
   role: string;
 

@@ -1,8 +1,13 @@
-import { ForbiddenException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { CreatePlaceDto } from './dto/create-place.dto';
 import { UpdatePlaceDto } from './dto/update-place.dto';
 import { Places } from './schema/places.schema';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { User } from 'src/auth/schema/user.schema';
 import { CustomRequest } from 'src/shared/custom-request';
@@ -10,8 +15,10 @@ import { CustomRequest } from 'src/shared/custom-request';
 @Injectable()
 export class PlacesService {
   constructor(
+    private readonly jwtService: JwtService,
+    private readonly mailService: MailerService,
     @InjectModel(Places.name)
-    private placesModel: Model<Places>,
+    private readonly placesModel: Model<Places>,
   ) {}
   async create(
     createPlaceDto: CreatePlaceDto,
@@ -20,16 +27,19 @@ export class PlacesService {
   ) {
     const user = request.user as User;
     console.log(user);
-    const annonceCreated = await this.placesModel.create({
+    const placeCreated = await this.placesModel.create({
       ...createPlaceDto,
       photos: photos,
       userId: user.id,
     });
 
-    if (annonceCreated) {
-      return { message: 'Annonce created, wait for confirmation from Admin.' };
+    console.log(photos);
+
+    if (placeCreated) {
+      console.log(placeCreated);
+      return { message: 'Place created, wait for confirmation from Admin.' };
     } else {
-      throw new Error('Error while creating the Announce');
+      throw new Error('Error while creating the Place');
     }
   }
 
@@ -42,9 +52,9 @@ export class PlacesService {
     }
   }
   async findAllByStatus(status: Boolean) {
-     if (status !== true && status !== false) {
-       throw new Error('Invalid status value');
-     }
+    if (status !== true && status !== false) {
+      throw new Error('Invalid status value');
+    }
     const places = await this.placesModel.find({ isConfirmed: status });
     if (places.length != 0) {
       return places;
@@ -54,11 +64,20 @@ export class PlacesService {
   }
 
   async findOne(id: string) {
-    const place = await this.placesModel.findOne({ _id: id });
-    if (place) {
-      return place;
-    } else {
-      return { message: 'Place not found.' };
+    try {
+      // Check if the id is a valid MongoDB ObjectId
+      if (!Types.ObjectId.isValid(id)) {
+        return { message: 'Invalid place ID format.' };
+      }
+
+      const place = await this.placesModel.findOne({ _id: id });
+      if (place) {
+        return place;
+      } else {
+        return { message: 'Place not found.' };
+      }
+    } catch (error) {
+      return { message: 'Error finding place.' };
     }
   }
 
@@ -83,10 +102,7 @@ export class PlacesService {
       return { message: 'Place not found' };
     }
 
-    if (
-      user.id !== placeToRemove.userId.toString() &&
-      user.role !== 'admin'
-    ) {
+    if (user.id !== placeToRemove.userId.toString() && user.role !== 'admin') {
       throw new ForbiddenException(
         'You do not have permission to delete this place',
       );
@@ -131,10 +147,29 @@ export class PlacesService {
         { address: { $regex: keyword, $options: 'i' } },
       ];
     }
-    const places = this.placesModel.find(query).exec();
-    if ((await places).length === 0) {
-      return 'No places Found ';
+    const places = await this.placesModel.find(query).exec();
+    if (places.length === 0) {
+      return 'No places Found';
     }
     return places;
+  }
+
+  async confirmPlace(request: CustomRequest, placeId: string) {
+    if (request.user.role !== 'admin') {
+      throw new ForbiddenException('Only admins can confirm places');
+    }
+
+    const place = await this.placesModel.findById(placeId);
+    if (!place) {
+      throw new NotFoundException('Place not found');
+    }
+
+    await this.placesModel.findByIdAndUpdate(
+      placeId,
+      { isConfirmed: true },
+      { new: true },
+    );
+
+    return { message: 'Place confirmed successfully.' };
   }
 }

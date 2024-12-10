@@ -11,7 +11,7 @@ import {
   Query,
   Req,
   UseGuards,
-  Headers
+  Headers,
 } from '@nestjs/common';
 import { PlacesService } from './places.service';
 import { CreatePlaceDto } from './dto/create-place.dto';
@@ -23,7 +23,6 @@ import { Request } from 'express';
 import { FilterByTypeDto } from './dto/filter-type.dto';
 import { SearchPlaceDto } from './dto/search-place.dto';
 import { AuthGuard } from 'src/auth/auth.guard';
-
 
 @Controller('places')
 export class PlacesController {
