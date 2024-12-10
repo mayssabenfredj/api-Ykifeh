@@ -10,11 +10,8 @@ import {
 export class CreateAuthDto {
   @IsNotEmpty()
   @IsString()
-  firstName: string;
+  fullName: string;
 
-  @IsNotEmpty()
-  @IsString()
-  lastName: string;
 
   @IsNotEmpty()
   @IsEmail()
