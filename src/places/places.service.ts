@@ -2,7 +2,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
-  UnauthorizedException,
+  BadRequestException,
 } from '@nestjs/common';
 import { CreatePlaceDto } from './dto/create-place.dto';
 import { UpdatePlaceDto } from './dto/update-place.dto';
@@ -15,8 +15,6 @@ import { CustomRequest } from 'src/shared/custom-request';
 @Injectable()
 export class PlacesService {
   constructor(
-    private readonly jwtService: JwtService,
-    private readonly mailService: MailerService,
     @InjectModel(Places.name)
     private readonly placesModel: Model<Places>,
   ) {}
@@ -82,15 +80,30 @@ export class PlacesService {
   }
 
   async update(id: string, updatePlaceDto: UpdatePlaceDto) {
-    const updatedPlace = await this.placesModel
-      .findByIdAndUpdate(id, { $set: updatePlaceDto }, { new: true })
-      .exec();
-
-    if (!updatedPlace) {
-      throw new NotFoundException(`Place  not found`);
+    // Validate ID format
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid ID format');
     }
 
-    return updatedPlace;
+    // Validate update data
+    if (updatePlaceDto.title === '') {
+      throw new BadRequestException('Invalid update data');
+    }
+
+    // Check if place exists
+    const place = await this.placesModel.findById(id);
+    if (!place) {
+      throw new NotFoundException('Place not found');
+    }
+
+    // Perform update
+    const updatedPlace = await this.placesModel.findByIdAndUpdate(
+      id,
+      { $set: updatePlaceDto },
+      { new: true },
+    );
+
+    return { message: 'Place updated successfully.' };
   }
 
   async remove(request: CustomRequest, id: string) {
@@ -118,21 +131,22 @@ export class PlacesService {
   }
 
   async filterByTypes(types: string[]) {
-    const query: any = {};
-
-    if (types && types.length > 0) {
-      query.type = {
-        $in: types.map((type) => new RegExp(type, 'i')),
-      };
-
-      const places = await this.placesModel.find(query).exec();
-
-      if (places.length === 0) {
-        return 'No places Found';
-      }
-
-      return places;
+    if (!types || types.length === 0) {
+      return 'No places Found';
     }
+
+    const query: any = {};
+    query.type = {
+      $in: types.map((type) => new RegExp(type, 'i')),
+    };
+
+    const places = await this.placesModel.find(query).exec();
+
+    if (places.length === 0) {
+      return 'No places Found';
+    }
+
+    return places;
   }
 
   async searchByKeyword(keyword?: string) {

@@ -15,6 +15,13 @@ const mockPlacesModel = {
   findOne: jest.fn().mockResolvedValue(null),
   find: jest.fn().mockResolvedValue([]),
   update: jest.fn().mockResolvedValue({}),
+  findById: jest.fn(),
+  findByIdAndUpdate: jest.fn().mockImplementation((id, update, options) => {
+    return Promise.resolve({
+      _id: id,
+      ...update.$set,
+    });
+  }),
 };
 
 describe('PlacesService', () => {
@@ -302,6 +309,349 @@ describe('PlacesService', () => {
 
       const result = await service.findOne(placeId);
       expect(result).toEqual({ message: 'Place not found.' });
+    });
+  });
+
+  describe('filterByTypes', () => {
+    const mockPlaces = [
+      { type: ['restaurant'], title: 'Restaurant 1' },
+      { type: ['hotel'], title: 'Hotel 1' },
+      { type: ['restaurant'], title: 'Restaurant 2' },
+      { type: ['museum'], title: 'Museum 1' },
+      { type: ['RESTAURANT'], title: 'Restaurant 3' },
+    ];
+
+    beforeEach(() => {
+      // Reset the mock before each test
+      mockPlacesModel.find.mockReset();
+    });
+
+    it('TC01: should filter places by multiple valid types', async () => {
+      const types = ['restaurant', 'hotel'];
+      mockPlacesModel.find.mockReturnValue({
+        exec: jest
+          .fn()
+          .mockResolvedValue([mockPlaces[0], mockPlaces[1], mockPlaces[2]]),
+      });
+
+      const result = await service.filterByTypes(types);
+      expect(result).toHaveLength(3);
+      expect(mockPlacesModel.find).toHaveBeenCalled();
+    });
+
+    it('TC02: should return "No places Found" for non-existing types', async () => {
+      const types = ['museum', 'park'];
+      mockPlacesModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue([]),
+      });
+
+      const result = await service.filterByTypes(types);
+      expect(result).toBe('No places Found');
+    });
+
+    it('TC03: should filter places by single type with multiple matches', async () => {
+      const types = ['restaurant'];
+      mockPlacesModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue([mockPlaces[0], mockPlaces[2]]),
+      });
+
+      const result = await service.filterByTypes(types);
+      expect(Array.isArray(result)).toBe(true);
+      if (Array.isArray(result)) {
+        // Type guard
+        expect(result).toHaveLength(2);
+        expect(result.every((place) => place.type.includes('restaurant'))).toBe(
+          true,
+        );
+      }
+    });
+
+    it('TC04: should be case-insensitive when filtering types', async () => {
+      const types = ['RESTAURANT'];
+      mockPlacesModel.find.mockReturnValue({
+        exec: jest
+          .fn()
+          .mockResolvedValue([mockPlaces[0], mockPlaces[2], mockPlaces[4]]),
+      });
+
+      const result = await service.filterByTypes(types);
+      expect(result).toHaveLength(3);
+    });
+
+    it('TC05: should handle empty types array', async () => {
+      const types: string[] = [];
+      mockPlacesModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue([]),
+      });
+
+      const result = await service.filterByTypes(types);
+      expect(result).toBe('No places Found');
+    });
+
+    it('TC06: should handle invalid type values', async () => {
+      const types = [null, 'hotel'];
+      mockPlacesModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue([]),
+      });
+
+      const result = await service.filterByTypes(types);
+      expect(result).toBe('No places Found');
+    });
+
+    it('TC07: should filter places by single valid type', async () => {
+      const types = ['restaurant'];
+      mockPlacesModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue([mockPlaces[0]]),
+      });
+
+      const result = await service.filterByTypes(types);
+      expect(Array.isArray(result)).toBe(true);
+      if (Array.isArray(result)) {
+        expect(result).toHaveLength(1);
+        expect(result[0].type).toContain('restaurant');
+      }
+    });
+  });
+
+  describe('searchByKeyword', () => {
+    const mockPlaces = [
+      {
+        title: 'Restaurant Paris',
+        type: ['restaurant'],
+        tags: ['cozy'],
+        description: 'A cozy restaurant',
+        address: 'Paris, France',
+      },
+      {
+        title: 'Hotel Vegan',
+        type: ['hotel'],
+        tags: ['vegan'],
+        description: 'A vegan hotel',
+        address: 'London',
+      },
+      {
+        title: 'Museum',
+        type: ['museum'],
+        description: 'Historical museum',
+        address: 'Paris, France',
+      },
+    ];
+
+    beforeEach(() => {
+      mockPlacesModel.find.mockReset();
+    });
+
+    // TC01: Search with valid keyword
+    it('should return places matching the keyword in title/type/tags/description/address', async () => {
+      mockPlacesModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue([mockPlaces[0]]),
+      });
+
+      const result = await service.searchByKeyword('restaurant');
+      expect(Array.isArray(result)).toBe(true);
+      if (Array.isArray(result)) {
+        expect(result.length).toBeGreaterThan(0);
+        expect(result[0].title).toContain('Restaurant');
+      }
+    });
+
+    // TC02: Search with non-existent keyword
+    it('should return "No places Found" for non-existent keyword', async () => {
+      mockPlacesModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue([]),
+      });
+
+      const result = await service.searchByKeyword('musee');
+      expect(result).toBe('No places Found');
+    });
+
+    // TC03: Search by type
+    it('should return places matching the type keyword', async () => {
+      mockPlacesModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue([mockPlaces[1]]),
+      });
+
+      const result = await service.searchByKeyword('hotel');
+      expect(Array.isArray(result)).toBe(true);
+      if (Array.isArray(result)) {
+        expect(result[0].type).toContain('hotel');
+      }
+    });
+
+    // TC04: Search by tag
+    it('should return places matching the tag keyword', async () => {
+      mockPlacesModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue([mockPlaces[1]]),
+      });
+
+      const result = await service.searchByKeyword('vegan');
+      expect(Array.isArray(result)).toBe(true);
+      if (Array.isArray(result)) {
+        expect(result[0].tags).toContain('vegan');
+      }
+    });
+
+    // TC05: Search by address
+    it('should return places matching the address keyword', async () => {
+      mockPlacesModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue([mockPlaces[0], mockPlaces[2]]),
+      });
+
+      const result = await service.searchByKeyword('Paris');
+      expect(Array.isArray(result)).toBe(true);
+      if (Array.isArray(result)) {
+        expect(result.every((place) => place.address.includes('Paris'))).toBe(
+          true,
+        );
+      }
+    });
+
+    // TC06: Search by description keyword
+    it('should return places matching the description keyword', async () => {
+      mockPlacesModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue([mockPlaces[0]]),
+      });
+
+      const result = await service.searchByKeyword('cozy');
+      expect(Array.isArray(result)).toBe(true);
+      if (Array.isArray(result)) {
+        expect(result[0].description).toContain('cozy');
+      }
+    });
+
+    // TC07: Empty keyword search
+    it('should return all places when no keyword is provided', async () => {
+      mockPlacesModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockPlaces),
+      });
+
+      const result = await service.searchByKeyword('');
+      expect(Array.isArray(result)).toBe(true);
+      if (Array.isArray(result)) {
+        expect(result).toEqual(mockPlaces);
+      }
+    });
+
+    // TC08: Search with special characters
+    it('should handle special characters in search keyword', async () => {
+      mockPlacesModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue([mockPlaces[0]]),
+      });
+
+      const result = await service.searchByKeyword('rest@urant');
+      expect(Array.isArray(result)).toBe(true);
+      if (Array.isArray(result)) {
+        expect(result[0].title).toContain('Restaurant');
+      }
+    });
+
+    // TC09: Partial keyword search
+    it('should return places matching partial keywords', async () => {
+      mockPlacesModel.find.mockReturnValue({
+        exec: jest.fn().mockResolvedValue([mockPlaces[0]]),
+      });
+
+      const result = await service.searchByKeyword('resta');
+      expect(Array.isArray(result)).toBe(true);
+      if (Array.isArray(result)) {
+        expect(result[0].title).toContain('Restaurant');
+      }
+    });
+  });
+
+  describe('update', () => {
+    // TC01: Update existing place
+    it('should update an existing place successfully', async () => {
+      const id = '507f1f77bcf86cd799439011'; // Valid MongoDB ObjectId
+      const updatePlaceDto = {
+        title: 'New Title',
+        phone: '123456789',
+      };
+      const existingPlace = {
+        _id: id,
+        title: 'Old Title',
+        phone: '987654321',
+      };
+
+      mockPlacesModel.findById.mockResolvedValue(existingPlace);
+      mockPlacesModel.findByIdAndUpdate.mockResolvedValue({
+        ...existingPlace,
+        ...updatePlaceDto,
+      });
+
+      const result = await service.update(id, updatePlaceDto);
+      expect(result).toEqual({
+        message: 'Place updated successfully.',
+      });
+    });
+
+    // TC02: Update non-existent place
+    it('should throw NotFoundException for non-existent place', async () => {
+      const id = '507f1f77bcf86cd799439012'; // Valid MongoDB ObjectId
+      const updatePlaceDto = {
+        title: 'Updated Title',
+      };
+
+      mockPlacesModel.findById.mockResolvedValue(null);
+
+      await expect(service.update(id, updatePlaceDto)).rejects.toThrow(
+        'Place not found',
+      );
+    });
+
+    // TC03: Partial update with valid DTO
+    it('should update only specified fields', async () => {
+      const id = '507f1f77bcf86cd799439013'; // Valid MongoDB ObjectId
+      const updatePlaceDto = {
+        phone: '987654321',
+      };
+      const existingPlace = {
+        _id: id,
+        title: 'Original Title',
+        phone: '123456789',
+        description: 'Original description',
+      };
+
+      mockPlacesModel.findById.mockResolvedValue(existingPlace);
+      mockPlacesModel.findByIdAndUpdate.mockResolvedValue({
+        ...existingPlace,
+        ...updatePlaceDto,
+      });
+
+      const result = await service.update(id, updatePlaceDto);
+      expect(result).toEqual({
+        message: 'Place updated successfully.',
+      });
+    });
+
+    // TC05: Update with empty DTO
+    it('should handle empty update DTO', async () => {
+      const id = '507f1f77bcf86cd799439014'; // Valid MongoDB ObjectId
+      const updatePlaceDto = {};
+      const existingPlace = {
+        _id: id,
+        title: 'Original Title',
+      };
+
+      mockPlacesModel.findById.mockResolvedValue(existingPlace);
+      mockPlacesModel.findByIdAndUpdate.mockResolvedValue(existingPlace);
+
+      const result = await service.update(id, updatePlaceDto);
+      expect(result).toEqual({
+        message: 'Place updated successfully.',
+      });
+    });
+
+    // TC06: Update with invalid data
+    it('should handle invalid update data', async () => {
+      const id = '507f1f77bcf86cd799439015'; // Valid MongoDB ObjectId
+      const updatePlaceDto = {
+        title: '', // Invalid empty title
+      };
+
+      await expect(service.update(id, updatePlaceDto)).rejects.toThrow(
+        'Invalid update data',
+      );
     });
   });
 });
