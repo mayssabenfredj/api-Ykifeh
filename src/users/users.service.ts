@@ -8,17 +8,17 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import {
-  comparePassword,
-  hashPassword,
-  validateToken,
-} from 'src/shared/shared.service';
 import { UpdatePasswordDto } from './dto/update-password-dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
 import { join } from 'path';
 import * as path from 'path';
 import * as fs from 'fs';
 import { Response } from 'express';
+import {
+  validateToken,
+  comparePassword,
+  hashPassword,
+} from 'src/shared/shared.service';
 import { User } from 'src/auth/schema/user.schema';
 
 @Injectable()

@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
@@ -46,7 +46,7 @@ export const generateToken = async (jwtService: JwtService, user: any) => {
   return jwtService.sign(payload);
 };
 
-/******Verfiy Admin *////// 
+/******Verfiy Admin */ /////
 export const verifyAdmin = async (jwtService: JwtService, token: string) => {
   if (!token) {
     throw new UnauthorizedException('You are not logged in');
@@ -56,6 +56,5 @@ export const verifyAdmin = async (jwtService: JwtService, token: string) => {
   if (!data) {
     throw new UnauthorizedException();
   }
-  return data; 
+  return data;
 };
-
