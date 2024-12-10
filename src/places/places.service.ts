@@ -9,7 +9,7 @@ import { UpdatePlaceDto } from './dto/update-place.dto';
 import { JwtService } from '@nestjs/jwt';
 import { MailerService } from '@nestjs-modules/mailer';
 import { Places } from './schema/places.schema';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { verifyAdmin } from 'src/shared/shared.service';
 import { Request } from 'express';
@@ -31,16 +31,19 @@ export class PlacesService {
   ) {
     const user = request.user as User;
     console.log(user);
-    const annonceCreated = await this.placesModel.create({
+    const placeCreated = await this.placesModel.create({
       ...createPlaceDto,
       photos: photos,
       userId: user.id,
     });
 
-    if (annonceCreated) {
-      return { message: 'Annonce created, wait for confirmation from Admin.' };
+    console.log(photos);
+
+    if (placeCreated) {
+      console.log(placeCreated);
+      return { message: 'Place created, wait for confirmation from Admin.' };
     } else {
-      throw new Error('Error while creating the Announce');
+      throw new Error('Error while creating the Place');
     }
   }
 
@@ -62,11 +65,20 @@ export class PlacesService {
   }
 
   async findOne(id: string) {
-    const place = await this.placesModel.findOne({ _id: id });
-    if (place) {
-      return place;
-    } else {
-      return { message: 'Place not found.' };
+    try {
+      // Check if the id is a valid MongoDB ObjectId
+      if (!Types.ObjectId.isValid(id)) {
+        return { message: 'Invalid place ID format.' };
+      }
+
+      const place = await this.placesModel.findOne({ _id: id });
+      if (place) {
+        return place;
+      } else {
+        return { message: 'Place not found.' };
+      }
+    } catch (error) {
+      return { message: 'Error finding place.' };
     }
   }
 
@@ -136,10 +148,29 @@ export class PlacesService {
         { address: { $regex: keyword, $options: 'i' } },
       ];
     }
-    const places = this.placesModel.find(query).exec();
-    if ((await places).length === 0) {
-      return 'No places Found ';
+    const places = await this.placesModel.find(query).exec();
+    if (places.length === 0) {
+      return 'No places Found';
     }
     return places;
+  }
+
+  async confirmPlace(request: CustomRequest, placeId: string) {
+    if (request.user.role !== 'admin') {
+      throw new ForbiddenException('Only admins can confirm places');
+    }
+
+    const place = await this.placesModel.findById(placeId);
+    if (!place) {
+      throw new NotFoundException('Place not found');
+    }
+
+    await this.placesModel.findByIdAndUpdate(
+      placeId,
+      { isConfirmed: true },
+      { new: true },
+    );
+
+    return { message: 'Place confirmed successfully.' };
   }
 }

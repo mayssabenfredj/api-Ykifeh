@@ -144,7 +144,9 @@ export class AuthService {
       throw new UnauthorizedException('Not authenticated');
     }
 
-    const decoded = await this.jwtService.verifyAsync(token);
+    const cleanToken = token.startsWith('Bearer ') ? token.slice(7) : token;
+
+    const decoded = await this.jwtService.verifyAsync(cleanToken);
     if (!decoded) {
       throw new UnauthorizedException('Invalid token');
     }

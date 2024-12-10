@@ -8,7 +8,6 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { User } from 'src/auth/schema/user.schema';
 import {
   comparePassword,
   hashPassword,
@@ -20,6 +19,7 @@ import { join } from 'path';
 import * as path from 'path';
 import * as fs from 'fs';
 import { Response } from 'express';
+import { User } from 'src/auth/schema/user.schema';
 
 @Injectable()
 export class UsersService {
@@ -80,6 +80,7 @@ export class UsersService {
   /***********Update *******/
 
   async update(token: string, updateAuthDto: UpdateAuthDto, photo: string) {
+    console.log(token);
     const data = await validateToken(this.jwtService, token);
     const fondUser = await this.userModel.findOne({ _id: data['id'] });
 

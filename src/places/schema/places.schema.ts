@@ -27,7 +27,7 @@ export class Places extends Document {
   @Prop({ required: true })
   type: string[];
 
-  @Prop()
+  @Prop({ type: [String], required: true })
   tags: string[];
 
   @Prop()
