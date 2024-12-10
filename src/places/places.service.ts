@@ -6,13 +6,9 @@ import {
 } from '@nestjs/common';
 import { CreatePlaceDto } from './dto/create-place.dto';
 import { UpdatePlaceDto } from './dto/update-place.dto';
-import { JwtService } from '@nestjs/jwt';
-import { MailerService } from '@nestjs-modules/mailer';
 import { Places } from './schema/places.schema';
 import { Model, Types } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { verifyAdmin } from 'src/shared/shared.service';
-import { Request } from 'express';
 import { User } from 'src/auth/schema/user.schema';
 import { CustomRequest } from 'src/shared/custom-request';
 
@@ -56,6 +52,9 @@ export class PlacesService {
     }
   }
   async findAllByStatus(status: Boolean) {
+    if (status !== true && status !== false) {
+      throw new Error('Invalid status value');
+    }
     const places = await this.placesModel.find({ isConfirmed: status });
     if (places.length != 0) {
       return places;
